@@ -43,8 +43,8 @@ struct RepoAutocompleteScoringCoverageTests {
             heatmap: []
         )
 
-        #expect(RepoAutocompleteScoring.score(repo: repo, query: "opc") != nil)
-        #expect(RepoAutocompleteScoring.score(repo: repo, query: "open") != nil)
+        #expect(RepoAutocompleteScoring.score(repo: repo, query: "rpk") != nil)
+        #expect(RepoAutocompleteScoring.score(repo: repo, query: "exa") != nil)
         #expect(RepoAutocompleteScoring.score(repo: repo, query: "zzzz") == nil)
         #expect(RepoAutocompleteScoring.score(repo: repo, query: "  ") == nil)
     }
