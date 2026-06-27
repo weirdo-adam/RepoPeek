@@ -88,7 +88,7 @@ struct UserSettingsCoverageTests {
     func `legacy gitlab host migrates to account settings`() throws {
         let data = Data("""
         {
-          "gitlabHost": "https://code.company.com/gitlab/"
+          "gitlabHost": "https://gitlab.internal.example.com/gitlab/"
         }
         """.utf8)
 
@@ -96,8 +96,8 @@ struct UserSettingsCoverageTests {
 
         let account = try #require(settings.gitlabAccounts.first)
         #expect(settings.gitlabAccounts.count == 1)
-        #expect(account.host.absoluteString == "https://code.company.com/gitlab")
-        #expect(account.hostKey == "code.company.com/gitlab")
+        #expect(account.host.absoluteString == "https://gitlab.internal.example.com/gitlab")
+        #expect(account.hostKey == "gitlab.internal.example.com/gitlab")
         #expect(settings.gitlabHost == account.host)
     }
 
@@ -106,8 +106,8 @@ struct UserSettingsCoverageTests {
         let data = Data("""
         {
           "gitlabAccounts": [
-            {"id": "one", "name": "One", "host": "https://code.company.com/gitlab/", "enabled": true},
-            {"id": "two", "name": "Two", "host": "https://code.company.com/gitlab", "enabled": true},
+            {"id": "one", "name": "One", "host": "https://gitlab.internal.example.com/gitlab/", "enabled": true},
+            {"id": "two", "name": "Two", "host": "https://gitlab.internal.example.com/gitlab", "enabled": true},
             {"id": "three", "name": "Three", "host": "https://gitlab.com", "enabled": false}
           ]
         }
@@ -115,7 +115,7 @@ struct UserSettingsCoverageTests {
 
         let settings = try JSONDecoder().decode(UserSettings.self, from: data)
 
-        #expect(settings.gitlabAccounts.map(\.hostKey) == ["code.company.com/gitlab", "gitlab.com"])
+        #expect(settings.gitlabAccounts.map(\.hostKey) == ["gitlab.internal.example.com/gitlab", "gitlab.com"])
         #expect(settings.gitlabAccounts.first?.id == "one")
     }
 
@@ -124,9 +124,9 @@ struct UserSettingsCoverageTests {
         let data = Data("""
         {
           "gitlabAccounts": [
-            {"id": "alice", "name": "Alice", "host": "https://code.company.com/gitlab/", "username": "Alice", "enabled": true},
-            {"id": "bob", "name": "Bob", "host": "https://code.company.com/gitlab", "username": "bob", "enabled": true},
-            {"id": "alice-copy", "name": "Alice Copy", "host": "https://code.company.com/gitlab", "username": "alice", "enabled": true}
+            {"id": "alice", "name": "Alice", "host": "https://gitlab.internal.example.com/gitlab/", "username": "Alice", "enabled": true},
+            {"id": "bob", "name": "Bob", "host": "https://gitlab.internal.example.com/gitlab", "username": "bob", "enabled": true},
+            {"id": "alice-copy", "name": "Alice Copy", "host": "https://gitlab.internal.example.com/gitlab", "username": "alice", "enabled": true}
           ]
         }
         """.utf8)
@@ -134,12 +134,12 @@ struct UserSettingsCoverageTests {
         let settings = try JSONDecoder().decode(UserSettings.self, from: data)
 
         #expect(settings.gitlabAccounts.map(\.accountID) == [
-            "code.company.com/gitlab#alice",
-            "code.company.com/gitlab#bob"
+            "gitlab.internal.example.com/gitlab#alice",
+            "gitlab.internal.example.com/gitlab#bob"
         ])
         #expect(settings.gitlabAccounts.map(\.hostKey) == [
-            "code.company.com/gitlab",
-            "code.company.com/gitlab"
+            "gitlab.internal.example.com/gitlab",
+            "gitlab.internal.example.com/gitlab"
         ])
     }
 

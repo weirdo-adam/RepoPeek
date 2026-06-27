@@ -191,7 +191,7 @@ struct PATAuthenticatorTests {
         let session = URLSession(configuration: Self.sessionConfiguration())
         let handlerID = UUID().uuidString
         Self.MockURLProtocol.register(handlerID: handlerID) { request in
-            #expect(request.url?.absoluteString == "https://code.company.com/api/v4/user")
+            #expect(request.url?.absoluteString == "https://gitlab.internal.example.com/api/v4/user")
             #expect(request.value(forHTTPHeaderField: "PRIVATE-TOKEN") == "glpat_selfmanaged")
             #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
 
@@ -210,11 +210,11 @@ struct PATAuthenticatorTests {
 
         let user = try await authenticator.authenticate(
             pat: "glpat_selfmanaged",
-            host: #require(URL(string: "https://code.company.com"))
+            host: #require(URL(string: "https://gitlab.internal.example.com"))
         )
 
         #expect(user.username == "gitlabuser")
-        #expect(try store.loadPAT(forHost: #require(URL(string: "https://code.company.com"))) == "glpat_selfmanaged")
+        #expect(try store.loadPAT(forHost: #require(URL(string: "https://gitlab.internal.example.com"))) == "glpat_selfmanaged")
     }
 
     @Test
@@ -237,7 +237,7 @@ struct PATAuthenticatorTests {
         }
         defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
 
-        let host = try #require(URL(string: "https://code.company.com"))
+        let host = try #require(URL(string: "https://gitlab.internal.example.com"))
         let authenticator = PATAuthenticator(
             tokenStore: store,
             session: Self.taggedSession(session, handlerID: handlerID)
@@ -248,8 +248,8 @@ struct PATAuthenticatorTests {
 
         #expect(alice.username == "alice")
         #expect(bob.username == "bob")
-        #expect(try store.loadPAT(accountID: "code.company.com#alice") == "glpat_alice")
-        #expect(try store.loadPAT(accountID: "code.company.com#bob") == "glpat_bob")
+        #expect(try store.loadPAT(accountID: "gitlab.internal.example.com#alice") == "glpat_alice")
+        #expect(try store.loadPAT(accountID: "gitlab.internal.example.com#bob") == "glpat_bob")
         #expect(authenticator.loadPAT(account: GitLabAccountSettings(host: host, username: "alice")) == "glpat_alice")
         #expect(authenticator.loadPAT(account: GitLabAccountSettings(host: host, username: "bob")) == "glpat_bob")
     }

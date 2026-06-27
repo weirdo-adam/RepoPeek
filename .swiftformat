@@ -1,5 +1,4 @@
 --swiftversion 6.2
---exclude Sources/RepoBar/API/Generated
 --indent 4
 --allman false
 --semicolons never

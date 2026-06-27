@@ -7,24 +7,24 @@ struct GitLabClientTests {
     func `api host uses GitLab v4 path`() throws {
         let gitlabCom = try GitLabClient.apiHost(for: #require(URL(string: "https://gitlab.com")))
         let selfManaged = try GitLabClient.apiHost(for: #require(URL(string: "https://gitlab.example.com")))
-        let brandedSelfManaged = try GitLabClient.apiHost(for: #require(URL(string: "https://code.company.com")))
-        let relativeSelfManaged = try GitLabClient.apiHost(for: #require(URL(string: "https://code.company.com:8443/gitlab/")))
+        let brandedSelfManaged = try GitLabClient.apiHost(for: #require(URL(string: "https://gitlab.internal.example.com")))
+        let relativeSelfManaged = try GitLabClient.apiHost(for: #require(URL(string: "https://gitlab.internal.example.com:8443/gitlab/")))
 
         #expect(gitlabCom.absoluteString == "https://gitlab.com/api/v4")
         #expect(selfManaged.absoluteString == "https://gitlab.example.com/api/v4")
-        #expect(brandedSelfManaged.absoluteString == "https://code.company.com/api/v4")
-        #expect(relativeSelfManaged.absoluteString == "https://code.company.com:8443/gitlab/api/v4")
+        #expect(brandedSelfManaged.absoluteString == "https://gitlab.internal.example.com/api/v4")
+        #expect(relativeSelfManaged.absoluteString == "https://gitlab.internal.example.com:8443/gitlab/api/v4")
     }
 
     @Test
     func `web host preserves self managed port and relative path`() async throws {
         let client = GitLabClient()
-        try await client.setWebHost(#require(URL(string: "https://code.company.com:8443/gitlab/")))
+        try await client.setWebHost(#require(URL(string: "https://gitlab.internal.example.com:8443/gitlab/")))
 
         let webHost = await client.webHost
         let apiHost = await client.apiHost
-        #expect(webHost.absoluteString == "https://code.company.com:8443/gitlab")
-        #expect(apiHost.absoluteString == "https://code.company.com:8443/gitlab/api/v4")
+        #expect(webHost.absoluteString == "https://gitlab.internal.example.com:8443/gitlab")
+        #expect(apiHost.absoluteString == "https://gitlab.internal.example.com:8443/gitlab/api/v4")
     }
 
     @Test
@@ -163,7 +163,7 @@ struct GitLabClientTests {
               {
                 "iid": 7,
                 "title": "Fix subgroup issue",
-                "web_url": "https://code.company.com/group/subgroup/project/-/issues/7",
+                "web_url": "https://gitlab.internal.example.com/group/subgroup/project/-/issues/7",
                 "updated_at": "2026-05-01T12:00:00Z",
                 "created_at": "2026-05-01T11:00:00Z",
                 "author": {"username": "alice", "avatar_url": "https://example.com/a.png"},
@@ -178,7 +178,7 @@ struct GitLabClientTests {
         defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
 
         let client = Self.gitLabClient(session: session, handlerID: handlerID)
-        try await client.setWebHost(#require(URL(string: "https://code.company.com")))
+        try await client.setWebHost(#require(URL(string: "https://gitlab.internal.example.com")))
         await client.setTokenProvider { "glpat_test" }
 
         let issues = try await client.recentIssues(owner: "group", name: "subgroup/project", limit: 20)
@@ -202,7 +202,7 @@ struct GitLabClientTests {
               {
                 "iid": 9,
                 "title": "Ship GitLab menus",
-                "web_url": "https://code.company.com/group/subgroup/project/-/merge_requests/9",
+                "web_url": "https://gitlab.internal.example.com/group/subgroup/project/-/merge_requests/9",
                 "updated_at": "2026-05-02T12:00:00Z",
                 "created_at": "2026-05-02T11:00:00Z",
                 "state": "opened",
@@ -221,7 +221,7 @@ struct GitLabClientTests {
         defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
 
         let client = Self.gitLabClient(session: session, handlerID: handlerID)
-        try await client.setWebHost(#require(URL(string: "https://code.company.com")))
+        try await client.setWebHost(#require(URL(string: "https://gitlab.internal.example.com")))
         await client.setTokenProvider { "glpat_test" }
 
         let mergeRequests = try await client.recentMergeRequests(owner: "group", name: "subgroup/project", limit: 20)
@@ -254,7 +254,7 @@ struct GitLabClientTests {
         defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
 
         let client = Self.gitLabClient(session: session, handlerID: handlerID)
-        try await client.setWebHost(#require(URL(string: "https://code.company.com")))
+        try await client.setWebHost(#require(URL(string: "https://gitlab.internal.example.com")))
         await client.setTokenProvider { "glpat_test" }
 
         let count = try await client.openMergeRequestCount(owner: "group", name: "subgroup/project")
@@ -300,7 +300,7 @@ struct GitLabClientTests {
         defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
 
         let client = Self.gitLabClient(session: session, handlerID: handlerID)
-        try await client.setWebHost(#require(URL(string: "https://code.company.com")))
+        try await client.setWebHost(#require(URL(string: "https://gitlab.internal.example.com")))
         await client.setTokenProvider { "glpat_test" }
 
         let first = try await client.openMergeRequestCount(owner: "group", name: "subgroup/project")

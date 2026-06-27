@@ -53,12 +53,12 @@ struct RepoPeekCoreModelsTests {
             heatmap: []
         )
         let second = first.withIdentity(RepositoryIdentity(
-            host: "code.company.com",
+            host: "gitlab.internal.example.com",
             projectPath: "group/project"
         ))
 
         #expect(first.lookupKey == "gitlab.com/group/project")
-        #expect(second.lookupKey == "code.company.com/group/project")
+        #expect(second.lookupKey == "gitlab.internal.example.com/group/project")
         #expect(RepositoryUniquing.byFullName([first, second]).count == 2)
     }
 

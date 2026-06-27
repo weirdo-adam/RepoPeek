@@ -76,7 +76,7 @@ struct TokenStorePATTests {
         let store = TokenStore(service: service)
 
         let gitlabCom = try #require(URL(string: "https://gitlab.com"))
-        let selfManaged = try #require(URL(string: "https://code.company.com/gitlab"))
+        let selfManaged = try #require(URL(string: "https://gitlab.internal.example.com/gitlab"))
         defer {
             store.clearPAT(forHost: gitlabCom)
             store.clearPAT(forHost: selfManaged)
@@ -84,10 +84,10 @@ struct TokenStorePATTests {
         }
 
         try store.savePAT("glpat-dotcom", forHost: gitlabCom)
-        try store.savePAT("glpat-company", forHost: selfManaged)
+        try store.savePAT("glpat-selfmanaged", forHost: selfManaged)
 
         #expect(try store.loadPAT(forHost: gitlabCom) == "glpat-dotcom")
-        #expect(try store.loadPAT(forHost: selfManaged) == "glpat-company")
+        #expect(try store.loadPAT(forHost: selfManaged) == "glpat-selfmanaged")
     }
 
     @Test
