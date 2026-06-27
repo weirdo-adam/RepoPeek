@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>RepoPeek</string>
+    <key>CFBundleName</key>
+    <string>RepoPeek</string>
+    <key>CFBundleIconFile</key>
+    <string>Icon</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>LSMultipleInstancesProhibited</key>
+    <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.weirdoadam.repopeek</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>repopeek</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

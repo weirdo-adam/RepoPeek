@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="face" x1="180" y1="320" x2="860" y2="980" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd8b4"/>
+      <stop offset="0.58" stop-color="#ffc59b"/>
+      <stop offset="1" stop-color="#ffba83"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="130" y1="20" x2="910" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff7f1f"/>
+      <stop offset="0.48" stop-color="#ff7420"/>
+      <stop offset="1" stop-color="#ff6818"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="410" y1="220" x2="700" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe1c1"/>
+      <stop offset="1" stop-color="#ffd1a5"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#d76825" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="155" fill="url(#face)"/>
+  <path d="M0 224C48 72 170 0 330 0h394c162 0 274 72 300 224v218C864 408 750 330 658 204c26 88 74 160 145 216H493c-24-74-36-134-37-198-42 98-78 160-126 198H280c50-88 72-168 70-250C270 334 155 420 0 442Z" fill="url(#hair)"/>
+  <path d="M352 188c-20 104-58 192-112 266h64c42-42 88-132 110-254Z" fill="url(#shine)" opacity="0.9"/>
+  <path d="M456 222c-22 98-50 160-92 232h76c34-58 55-122 56-204Z" fill="url(#shine)" opacity="0.92"/>
+  <path d="M606 184c24 100 78 188 164 258h-90c-62-54-104-130-124-228Z" fill="url(#shine)" opacity="0.9"/>
+
+  <g filter="url(#softShadow)">
+    <circle cx="254" cy="585" r="116" fill="#fffdf2"/>
+    <circle cx="293" cy="590" r="76" fill="#040506"/>
+    <circle cx="770" cy="585" r="116" fill="#fffdf2"/>
+    <circle cx="746" cy="592" r="76" fill="#040506"/>
+    <path d="M640 572l230-42" fill="none" stroke="#050506" stroke-width="28" stroke-linecap="round"/>
+  </g>
+
+  <ellipse cx="512" cy="670" rx="44" ry="30" fill="#ff7f4d" opacity="0.82"/>
+  <path d="M500 793c36-2 70-18 98-50" fill="none" stroke="#ff7040" stroke-width="24" stroke-linecap="round"/>
+</svg>

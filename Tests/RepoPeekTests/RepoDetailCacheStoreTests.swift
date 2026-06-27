@@ -1,0 +1,96 @@
+import Foundation
+@testable import RepoPeekCore
+import Testing
+
+struct RepoDetailCacheStoreTests {
+    @Test
+    func `save and load round trip`() throws {
+        let baseURL = FileManager.default.temporaryDirectory.appending(path: "repopeek-cache-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: baseURL) }
+
+        let store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
+        let apiHost = try #require(URL(string: "https://api.gitlab.com"))
+        let now = Date(timeIntervalSinceReferenceDate: 123_456)
+
+        let cache = try RepoDetailCache(
+            openPulls: 7,
+            openPullsFetchedAt: now,
+            ciDetails: CIStatusDetails(status: .passing, runCount: 42),
+            ciFetchedAt: now,
+            latestActivity: ActivityEvent(
+                title: "Merged MR",
+                actor: "alice",
+                date: now,
+                url: #require(URL(string: "https://example.com/pr/1"))
+            ),
+            activityEvents: [
+                ActivityEvent(
+                    title: "Merged MR",
+                    actor: "alice",
+                    date: now,
+                    url: #require(URL(string: "https://example.com/pr/1"))
+                ),
+                ActivityEvent(
+                    title: "Opened issue",
+                    actor: "bob",
+                    date: now.addingTimeInterval(-600),
+                    url: #require(URL(string: "https://example.com/issue/2"))
+                )
+            ],
+            activityFetchedAt: now,
+            traffic: TrafficStats(uniqueVisitors: 9, uniqueCloners: 2),
+            trafficFetchedAt: now,
+            heatmap: [HeatmapCell(date: now, count: 3)],
+            heatmapFetchedAt: now,
+            latestRelease: Release(name: "v1.0.0", tag: "v1.0.0", publishedAt: now, url: #require(URL(string: "https://example.com/release"))),
+            releaseFetchedAt: now
+        )
+
+        store.save(cache, apiHost: apiHost, owner: "example", name: "RepoPeek")
+        let loaded = store.load(apiHost: apiHost, owner: "example", name: "RepoPeek")
+
+        let result = try #require(loaded)
+        #expect(result.openPulls == 7)
+        #expect(result.ciDetails?.status == .passing)
+        #expect(result.latestActivity?.actor == "alice")
+        #expect(result.activityEvents?.count == 2)
+        #expect(result.traffic?.uniqueVisitors == 9)
+        #expect(result.heatmap?.count == 1)
+        #expect(result.latestRelease?.tag == "v1.0.0")
+    }
+
+    @Test
+    func `load corrupt cache removes file`() throws {
+        let baseURL = FileManager.default.temporaryDirectory.appending(path: "repopeek-cache-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: baseURL) }
+
+        let store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
+        let apiHost = try #require(URL(string: "https://api.gitlab.com"))
+
+        let cacheFile = baseURL
+            .appending(path: "api.gitlab.com")
+            .appending(path: "example")
+            .appending(path: "RepoPeek.json")
+
+        try FileManager.default.createDirectory(at: cacheFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("not json".utf8).write(to: cacheFile, options: .atomic)
+
+        #expect(store.load(apiHost: apiHost, owner: "example", name: "RepoPeek") == nil)
+        #expect(FileManager.default.fileExists(atPath: cacheFile.path()) == false)
+    }
+
+    @Test
+    func `clear removes cache directory`() throws {
+        let baseURL = FileManager.default.temporaryDirectory.appending(path: "repopeek-cache-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: baseURL) }
+
+        let store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
+        let apiHost = try #require(URL(string: "https://api.gitlab.com"))
+
+        store.save(RepoDetailCache(), apiHost: apiHost, owner: "example", name: "RepoPeek")
+        #expect(FileManager.default.fileExists(atPath: baseURL.path()))
+
+        store.clear()
+        #expect(FileManager.default.fileExists(atPath: baseURL.path()) == false)
+    }
+}

@@ -1,0 +1,289 @@
+import AppKit
+import RepoPeekCore
+
+extension StatusBarMenuManager {
+    @objc func logOut() {
+        Task { @MainActor in
+            await self.appState.logoutCurrentMethod()
+            self.appState.session.repositories = []
+        }
+    }
+
+    @objc func quitApp() {
+        NSApp.terminate(nil)
+    }
+
+    @objc func signIn() {
+        self.appState.session.settingsSelectedTab = .accounts
+        SettingsOpener.shared.open()
+    }
+
+    @objc func openRepo(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let builder = self.repoActionContext(from: sender).map(self.webURLBuilder(for:))
+            ?? self.webURLBuilder(forFullName: fullName)
+        guard let url = builder.repoURL(fullName: fullName) else { return }
+
+        self.open(url: url)
+    }
+
+    func openRepoFromMenu(fullName: String) {
+        guard let url = self.webURLBuilder(forFullName: fullName).repoURL(fullName: fullName) else { return }
+
+        self.open(url: url)
+    }
+
+    @objc func openIssues(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "issues")
+    }
+
+    @objc func openPulls(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "pulls")
+    }
+
+    @objc func openPipelines(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "pipelines")
+    }
+
+    @objc func openTags(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "tags")
+    }
+
+    @objc func openBranches(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "branches")
+    }
+
+    @objc func openCommits(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "commits")
+    }
+
+    func cachedRecentCommitDigest(cacheKey: String) -> Int? {
+        self.recentMenuService.cachedCommitDigest(cacheKey: cacheKey)
+    }
+
+    @objc func openContributors(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "graphs/contributors")
+    }
+
+    @objc func openReleases(_ sender: NSMenuItem) {
+        self.openRepoPath(sender: sender, path: "releases")
+    }
+
+    @objc func openLatestRelease(_ sender: NSMenuItem) {
+        guard let repo = self.repoModel(from: sender),
+              let url = repo.source.latestRelease?.url else { return }
+
+        self.open(url: url)
+    }
+
+    @objc func openActivity(_ sender: NSMenuItem) {
+        guard let repo = self.repoModel(from: sender),
+              let url = repo.activityURL else { return }
+
+        self.open(url: url)
+    }
+
+    @objc func openURLItem(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+
+        self.open(url: url)
+    }
+
+    @objc func openLocalFinder(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+
+        self.openLocalFinder(at: url)
+    }
+
+    func openLocalFinder(at url: URL) {
+        self.open(url: url)
+    }
+
+    @objc func openLocalTerminal(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+
+        self.openLocalTerminal(at: url)
+    }
+
+    func openLocalTerminal(at url: URL) {
+        let preferred = self.appState.session.settings.localProjects.preferredTerminal
+        let terminal = TerminalApp.resolve(preferred)
+        terminal.open(
+            at: url,
+            rootBookmarkData: self.appState.session.settings.localProjects.rootBookmarkData,
+            ghosttyOpenMode: self.appState.session.settings.localProjects.ghosttyOpenMode
+        )
+    }
+
+    func syncLocalRepo(_ status: LocalRepoStatus) {
+        self.localGitMenuCoordinator.syncLocalRepo(status)
+    }
+
+    func rebaseLocalRepo(_ status: LocalRepoStatus) {
+        self.localGitMenuCoordinator.rebaseLocalRepo(status)
+    }
+
+    func resetLocalRepo(_ status: LocalRepoStatus) {
+        self.localGitMenuCoordinator.resetLocalRepo(status)
+    }
+
+    @objc func switchLocalBranch(_ sender: NSMenuItem) {
+        self.localGitMenuCoordinator.switchLocalBranch(sender)
+    }
+
+    @objc func switchLocalWorktree(_ sender: NSMenuItem) {
+        self.localGitMenuCoordinator.switchLocalWorktree(sender)
+    }
+
+    @objc func createLocalBranch(_ sender: NSMenuItem) {
+        self.localGitMenuCoordinator.createLocalBranch(sender)
+    }
+
+    @objc func createLocalWorktree(_ sender: NSMenuItem) {
+        self.localGitMenuCoordinator.createLocalWorktree(sender)
+    }
+
+    @objc func checkoutRepoFromMenu(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let settings = self.appState.session.settings.localProjects
+        guard let rootPath = settings.rootPath, rootPath.isEmpty == false else {
+            let alert = NSAlert()
+            alert.messageText = L10n.t("Set a local projects folder", settings: self.appState.session.settings)
+            alert.informativeText = L10n.t(
+                "Choose a Local Projects folder in Settings to enable checkout.",
+                settings: self.appState.session.settings
+            )
+            alert.addButton(withTitle: L10n.t("Open Settings", settings: self.appState.session.settings))
+            alert.addButton(withTitle: L10n.t("Cancel", settings: self.appState.session.settings))
+            if alert.runModal() == .alertFirstButtonReturn {
+                self.openPreferences()
+            }
+            return
+        }
+        guard let remoteURL = self.cloneURL(for: fullName, context: self.repoActionContext(from: sender)) else {
+            self.presentAlert(
+                title: L10n.t("Checkout failed", settings: self.appState.session.settings),
+                message: L10n.t("Invalid repository URL.", settings: self.appState.session.settings)
+            )
+            return
+        }
+
+        let repoName = fullName.split(separator: "/").last.map(String.init) ?? fullName
+        let destination = URL(fileURLWithPath: PathFormatter.expandTilde(rootPath), isDirectory: true)
+            .appendingPathComponent(repoName, isDirectory: true)
+
+        if FileManager.default.fileExists(atPath: destination.path) {
+            self.presentAlert(title: "Folder exists", message: "\(destination.path) already exists.")
+            return
+        }
+
+        self.showCheckoutProgress(fullName: fullName, destination: destination)
+        let rootBookmark = settings.rootBookmarkData
+        Task.detached { [weak self] in
+            guard let self else { return }
+
+            let result = Result {
+                var capturedError: Error?
+                SecurityScopedBookmark.withAccess(to: destination, rootBookmarkData: rootBookmark) {
+                    do {
+                        try LocalGitService().cloneRepo(remoteURL: remoteURL, to: destination)
+                    } catch {
+                        capturedError = error
+                    }
+                }
+                if let capturedError { throw capturedError }
+            }
+            await MainActor.run {
+                self.closeCheckoutProgress()
+                switch result {
+                case .success:
+                    self.appState.session.settings.localProjects.preferredLocalPathsByFullName[fullName] = destination.path
+                    self.appState.persistSettings()
+                    self.appState.refreshLocalProjects()
+                    self.openLocalFinder(at: destination)
+                case let .failure(error):
+                    self.presentAlert(title: "Checkout failed", message: error.userFacingMessage)
+                }
+            }
+        }
+    }
+
+    @objc func copyRepoName(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(fullName, forType: .string)
+    }
+
+    @objc func copyRepoURL(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let builder = self.repoActionContext(from: sender).map(self.webURLBuilder(for:))
+            ?? self.webURLBuilder(forFullName: fullName)
+        guard let url = builder.repoURL(fullName: fullName) else { return }
+
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
+    }
+
+    @objc func pinRepo(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let accountID = self.repoActionContext(from: sender)?.accountID ?? self.repoModel(from: sender)?.source.identity?.accountID
+
+        self.requestMenuReopenAfterClose()
+        Task { await self.appState.addPinned(fullName, accountID: accountID) }
+    }
+
+    @objc func unpinRepo(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let accountID = self.repoActionContext(from: sender)?.accountID ?? self.repoModel(from: sender)?.source.identity?.accountID
+
+        self.requestMenuReopenAfterClose()
+        Task { await self.appState.removePinned(fullName, accountID: accountID) }
+    }
+
+    @objc func hideRepo(_ sender: NSMenuItem) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let accountID = self.repoActionContext(from: sender)?.accountID ?? self.repoModel(from: sender)?.source.identity?.accountID
+
+        self.requestMenuReopenAfterClose()
+        Task { await self.appState.hide(fullName, accountID: accountID) }
+    }
+
+    @objc func moveRepoUp(_ sender: NSMenuItem) {
+        self.requestMenuReopenAfterClose()
+        self.moveRepo(sender: sender, direction: -1)
+    }
+
+    @objc func moveRepoDown(_ sender: NSMenuItem) {
+        self.requestMenuReopenAfterClose()
+        self.moveRepo(sender: sender, direction: 1)
+    }
+
+    private func moveRepo(sender: NSMenuItem, direction: Int) {
+        guard let fullName = self.repoFullName(from: sender) else { return }
+
+        let accountID = self.repoActionContext(from: sender)?.accountID ?? self.repoModel(from: sender)?.source.identity?.accountID
+
+        var pins = self.appState.session.settings.repoList.pinnedRepositories(forAccountID: accountID)
+        guard let currentIndex = pins.firstIndex(where: {
+            $0.caseInsensitiveCompare(fullName) == .orderedSame
+        }) else { return }
+
+        let maxIndex = max(pins.count - 1, 0)
+        let target = max(0, min(maxIndex, currentIndex + direction))
+        guard target != currentIndex else { return }
+
+        pins.move(fromOffsets: IndexSet(integer: currentIndex), toOffset: target > currentIndex ? target + 1 : target)
+        self.appState.session.settings.repoList.setPinnedRepositories(pins, forAccountID: accountID)
+        self.appState.persistSettings()
+        self.appState.requestRefresh(cancelInFlight: true)
+    }
+}

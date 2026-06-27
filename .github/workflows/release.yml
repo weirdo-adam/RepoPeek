@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: macOS (Xcode 26.2)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+
+      - name: Show tool versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve Swift packages
+        run: swift package resolve
+
+      - name: Install SwiftLint/SwiftFormat
+        run: |
+          for tool in swiftlint swiftformat; do
+            if brew list --formula "$tool" >/dev/null 2>&1; then
+              if brew outdated --quiet "$tool" | grep -qx "$tool"; then
+                brew upgrade "$tool"
+              fi
+            else
+              brew install "$tool"
+            fi
+          done
+
+      - name: Run checks
+        run: pnpm check
+
+      - name: Build Release (Universal)
+        run: |
+          source version.env
+          swift build -c release --arch arm64 --arch x86_64
+
+      - name: Package App
+        run: |
+          REPOPEEK_UNIVERSAL_RELEASE=1 \
+          REPOPEEK_PACKAGE_DSYM=1 \
+          ./Scripts/package_app.sh release
+        env:
+          REPOPEEK_UNIVERSAL_RELEASE: '1'
+          REPOPEEK_PACKAGE_DSYM: '1'
+
+      - name: Create Zip Artifacts
+        run: |
+          source version.env
+          BUILD_DIR=".build/release"
+          UNIVERSAL_DIR=".build/apple/Products/Release"
+          if [ -f "${UNIVERSAL_DIR}/RepoPeek" ]; then
+            BUILD_DIR="${UNIVERSAL_DIR}"
+          fi
+
+          APP_BUNDLE="${BUILD_DIR}/RepoPeek.app"
+          if [ -d "${APP_BUNDLE}" ]; then
+            ZIP_NAME="RepoPeek-${MARKETING_VERSION}.zip"
+            echo "==> Creating ${ZIP_NAME}"
+            /usr/bin/ditto -c -k --keepParent "${APP_BUNDLE}" "${ZIP_NAME}"
+            echo "artifact_zip=${ZIP_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "ERROR: App bundle not found at ${APP_BUNDLE}"
+            exit 1
+          fi
+
+          DSYM_ZIP="RepoPeek-${MARKETING_VERSION}.dSYM.zip"
+          if [ -f "${DSYM_ZIP}" ]; then
+            echo "==> dSYM zip found: ${DSYM_ZIP}"
+            echo "artifact_dsym_zip=${DSYM_ZIP}" >> "$GITHUB_ENV"
+          fi
+
+          echo "marketing_version=${MARKETING_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ env.marketing_version }}"
+          draft: true
+          generate_release_notes: true
+          files: |
+            ${{ env.artifact_zip }}
+            ${{ env.artifact_dsym_zip }}

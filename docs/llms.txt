@@ -1,0 +1,12 @@
+# RepoPeek
+
+RepoPeek shows GitLab repository status in the macOS menu bar: CI, issues, merge requests, and latest releases.
+
+Canonical documentation:
+- RepoPeek: https://weirdo-adam.github.io/RepoPeek/ - RepoPeek is a native macOS menu bar app for GitLab repositories, pipelines, issues, merge requests, releases, local Git state, and rate limits.
+
+Source: https://github.com/weirdo-adam/RepoPeek
+
+Guidance for agents:
+- Prefer the canonical documentation URLs above over README excerpts or package metadata.
+- Fetch only the pages needed for the current task; this is an index, not a full-site corpus.

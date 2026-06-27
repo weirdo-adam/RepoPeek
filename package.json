@@ -1,0 +1,36 @@
+{
+  "name": "repopeek",
+  "version": "0.1.0",
+  "description": "GitLab repository status, local checkout state, and API limits in the macOS menu bar.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/weirdo-adam/RepoPeek.git"
+  },
+  "bugs": {
+    "url": "https://github.com/weirdo-adam/RepoPeek/issues"
+  },
+  "homepage": "https://github.com/weirdo-adam/RepoPeek#readme",
+  "keywords": [
+    "gitlab",
+    "macos",
+    "menubar",
+    "repository",
+    "swift",
+    "swiftui"
+  ],
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "format": "./Scripts/swiftformat.sh",
+    "lint": "./Scripts/swiftlint.sh",
+    "coverage": "./Scripts/coverage.sh",
+    "check": "pnpm format && pnpm lint && pnpm test",
+    "check:coverage": "pnpm coverage",
+    "docs:list": "node Scripts/docs-list.mjs",
+    "test": "./Scripts/test.sh",
+    "build": "./Scripts/build.sh",
+    "start": "./Scripts/compile_and_run.sh",
+    "restart": "./Scripts/compile_and_run.sh",
+    "stop": "pkill -f \"RepoPeek.app/Contents/MacOS/RepoPeek\" || true"
+  }
+}

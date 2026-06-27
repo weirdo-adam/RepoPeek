@@ -1,0 +1,61 @@
+name: Update Homebrew Cask
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  update-cask:
+    name: Update Homebrew Cask
+    runs-on: macos-latest
+    if: github.repository == 'weirdo-adam/RepoPeek'
+
+    steps:
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: weirdo-adam/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Compute Sha256
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          # Strip leading 'v' if present
+          VERSION="${VERSION#v}"
+          ZIP_URL="https://github.com/weirdo-adam/RepoPeek/releases/download/${{ github.event.release.tag_name }}/RepoPeek-${VERSION}.zip"
+          echo "Downloading ${ZIP_URL}..."
+          curl -sSL -o /tmp/repopeek.zip "${ZIP_URL}"
+          SHA256=$(shasum -a 256 /tmp/repopeek.zip | awk '{print $1}')
+          echo "version=${VERSION}" >> "$GITHUB_ENV"
+          echo "sha256=${SHA256}" >> "$GITHUB_ENV"
+          echo "Computed sha256: ${SHA256}"
+
+      - name: Update Cask
+        run: |
+          CASK_FILE="tap/Casks/repopeek.rb"
+          VERSION="${{ env.version }}"
+          SHA256="${{ env.sha256 }}"
+
+          # Update version line
+          sed -i '' "s/version \".*\"/version \"${VERSION}\"/" "${CASK_FILE}"
+
+          # Update sha256 line
+          sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" "${CASK_FILE}"
+
+          echo "Updated cask:"
+          cat "${CASK_FILE}"
+
+      - name: Commit and Push
+        working-directory: tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/repopeek.rb
+          git diff --staged --quiet || {
+            git commit -m "repo-peek: bump to ${{ env.version }}"
+            git push
+          }

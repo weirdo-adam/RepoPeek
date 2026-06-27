@@ -1,0 +1,171 @@
+import Foundation
+@testable import RepoPeek
+@testable import RepoPeekCore
+import Testing
+
+struct MenuSignatureTests {
+    @Test
+    func `repo submenu signature changes with repo counts`() {
+        let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let range = HeatmapRange(start: now.addingTimeInterval(-86400), end: now)
+        let settings = UserSettings()
+        let repo = Repository(
+            id: "1",
+            name: "Repo",
+            owner: "me",
+            sortOrder: 0,
+            error: nil,
+            rateLimitedUntil: nil,
+            ciStatus: .unknown,
+            openIssues: 1,
+            openPulls: 2,
+            latestRelease: nil,
+            latestActivity: nil,
+            activityEvents: [],
+            traffic: nil,
+            heatmap: []
+        )
+        let display = RepositoryDisplayModel(repo: repo, now: now)
+        let signatureA = RepoSubmenuSignature(
+            repo: display,
+            settings: settings,
+            heatmapRange: range,
+            recentCounts: RepoRecentCountSignature(
+                commits: nil,
+                commitsDigest: nil
+            ),
+            changelogPresentation: nil,
+            changelogHeadline: nil,
+            isPinned: false
+        )
+
+        let updatedRepo = Repository(
+            id: "1",
+            name: "Repo",
+            owner: "me",
+            sortOrder: 0,
+            error: nil,
+            rateLimitedUntil: nil,
+            ciStatus: .unknown,
+            openIssues: 3,
+            openPulls: 2,
+            latestRelease: nil,
+            latestActivity: nil,
+            activityEvents: [],
+            traffic: nil,
+            heatmap: []
+        )
+        let updatedDisplay = RepositoryDisplayModel(repo: updatedRepo, now: now)
+        let signatureB = RepoSubmenuSignature(
+            repo: updatedDisplay,
+            settings: settings,
+            heatmapRange: range,
+            recentCounts: RepoRecentCountSignature(
+                commits: nil,
+                commitsDigest: nil
+            ),
+            changelogPresentation: nil,
+            changelogHeadline: nil,
+            isPinned: false
+        )
+
+        #expect(signatureA != signatureB)
+    }
+
+    @Test
+    func `menu build signature changes with pinned repos`() {
+        let now = Date(timeIntervalSinceReferenceDate: 2_000_000)
+        var settings = UserSettings()
+        settings.repoList.pinnedRepositories = []
+        let repo = Repository(
+            id: "2",
+            name: "Other",
+            owner: "me",
+            sortOrder: 0,
+            error: nil,
+            rateLimitedUntil: nil,
+            ciStatus: .passing,
+            openIssues: 0,
+            openPulls: 0,
+            latestRelease: nil,
+            latestActivity: nil,
+            activityEvents: [],
+            traffic: nil,
+            heatmap: []
+        )
+        let display = RepositoryDisplayModel(repo: repo, now: now)
+        let signatureA = MenuBuildSignature(
+            account: AccountSignature(.loggedOut),
+            settings: MenuSettingsSignature(settings: settings, selection: .all),
+            hasLoadedRepositories: true,
+            rateLimitReset: nil,
+            rateLimits: RateLimitMenuSignature(.empty),
+            lastError: nil,
+            contribution: ContributionSignature(user: nil, error: nil, heatmapCount: 0),
+            globalActivity: ActivitySignature(events: [], error: nil),
+            globalCommits: CommitSignature(commits: [], error: nil),
+            heatmapRangeStart: now.timeIntervalSinceReferenceDate,
+            heatmapRangeEnd: now.timeIntervalSinceReferenceDate,
+            repoSearchQuery: "",
+            repoSearchExpanded: false,
+            reposDigest: RepoSignature.digest(for: [display]),
+            timeBucket: Int(now.timeIntervalSinceReferenceDate / 60)
+        )
+
+        settings.repoList.pinnedRepositories = [repo.fullName]
+        let signatureB = MenuBuildSignature(
+            account: AccountSignature(.loggedOut),
+            settings: MenuSettingsSignature(settings: settings, selection: .all),
+            hasLoadedRepositories: true,
+            rateLimitReset: nil,
+            rateLimits: RateLimitMenuSignature(.empty),
+            lastError: nil,
+            contribution: ContributionSignature(user: nil, error: nil, heatmapCount: 0),
+            globalActivity: ActivitySignature(events: [], error: nil),
+            globalCommits: CommitSignature(commits: [], error: nil),
+            heatmapRangeStart: now.timeIntervalSinceReferenceDate,
+            heatmapRangeEnd: now.timeIntervalSinceReferenceDate,
+            repoSearchQuery: "",
+            repoSearchExpanded: false,
+            reposDigest: RepoSignature.digest(for: [display]),
+            timeBucket: Int(now.timeIntervalSinceReferenceDate / 60)
+        )
+
+        #expect(signatureA != signatureB)
+    }
+
+    @Test
+    func `rate limit menu signature changes with cached remaining count`() {
+        let now = Date(timeIntervalSinceReferenceDate: 3_000_000)
+        let stale = Self.cacheSummary(remaining: 3700, now: now)
+        let fresh = Self.cacheSummary(remaining: 4948, now: now)
+
+        let signatureA = RateLimitMenuSignature(RateLimitDisplayState(diagnostics: .empty, cacheSummary: stale))
+        let signatureB = RateLimitMenuSignature(RateLimitDisplayState(diagnostics: .empty, cacheSummary: fresh))
+
+        #expect(signatureA != signatureB)
+    }
+
+    private static func cacheSummary(remaining: Int, now: Date) -> RepoPeekCacheSummary {
+        RepoPeekCacheSummary(
+            databasePath: "/tmp/cache.sqlite",
+            exists: true,
+            apiResponseCount: 1,
+            rateLimitCount: 0,
+            latestResponses: [
+                RepoPeekCachedResponseSummary(
+                    method: "GET",
+                    url: "https://api.gitlab.com/user/repos",
+                    hasETag: true,
+                    statusCode: 200,
+                    fetchedAt: now,
+                    rateLimitResource: "core",
+                    rateLimitLimit: 5000,
+                    rateLimitRemaining: remaining,
+                    rateLimitReset: now.addingTimeInterval(600)
+                )
+            ],
+            rateLimits: []
+        )
+    }
+}
